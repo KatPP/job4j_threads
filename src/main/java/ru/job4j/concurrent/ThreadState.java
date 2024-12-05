@@ -13,11 +13,18 @@ public class ThreadState {
         first.start();
         second.start();
 
-        try {
-            first.join();
-            second.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        /**
+         *  Здесь добавил вывод состояния, очень наглядно, и небольшая пауза чтобы не перегружать процессор.
+         */
+
+        while (first.getState() != Thread.State.TERMINATED || second.getState() != Thread.State.TERMINATED) {
+            System.out.println("Состояние первой нити: " + first.getState());
+            System.out.println("Состояние второй нити: " + second.getState());
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
         System.out.println("Работа завершена.");
