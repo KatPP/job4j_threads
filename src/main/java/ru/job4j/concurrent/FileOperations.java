@@ -11,7 +11,7 @@ public final class FileOperations {
     public static String content(FileContainer container,
                                  Predicate<Character> filter) throws IOException {
         StringBuilder output = new StringBuilder();  // Было: String += (неэффективно)
-        try (BufferedInputStream input = new BufferedInputStream(  // Было: FileInputStream без буфера
+        try (BufferedInputStream input = new BufferedInputStream (  // Было: FileInputStream без буфера
                 new FileInputStream(container.getFile()))) {          // Было: Ресурс не закрывался
             int data;
             while ((data = input.read()) != -1) {  // Было: > 0 (думаю что неверное условие конца файла поэтому исправил)
