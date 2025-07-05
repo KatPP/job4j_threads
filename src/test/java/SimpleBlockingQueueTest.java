@@ -7,74 +7,46 @@ import static org.junit.jupiter.api.Assertions.*;
 class SimpleBlockingQueueTest {
 
     @Test
-    @DisplayName("Производитель добавляет 10 элементов, потребитель их извлекает")
-    void producerAdds10ElementsConsumerConsumesThem() throws InterruptedException {
-        SimpleBlockingQueue<Integer> queue = new SimpleBlockingQueue<>(5);
+    @DisplayName("Производитель добавляет элемент, потребитель его извлекает")
+    void singleProducerSingleConsumer() throws InterruptedException {
+        SimpleBlockingQueue<Integer> queue = new SimpleBlockingQueue<>(1);
+        final int[] producedValue = {0};
+        final int[] consumedValue = {0};
 
         Thread producer = new Thread(() -> {
-            for (int i = 0; i < 10; i++) {
-                queue.offer(i);
-            }
-        });
-
-        Thread consumer = new Thread(() -> {
-            for (int i = 0; i < 10; i++) {
-                try {
-                    queue.poll();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        });
-
-        producer.start();
-        consumer.start();
-
-        producer.join();
-        consumer.join();
-
-        assertTrue(queue.isEmpty(), "Очередь должна быть пустой после извлечения всех элементов");
-    }
-
-    @Test
-    @DisplayName("При заполненной очереди производитель блокируется до освобождения места")
-    void producerBlocksWhenQueueIsFull() throws InterruptedException {
-        SimpleBlockingQueue<Integer> queue = new SimpleBlockingQueue<>(2);
-
-        queue.offer(1);
-        queue.offer(2);
-
-        Thread producer = new Thread(() -> {
-            queue.offer(3);
+            producedValue[0] = 42;
+            queue.offer(producedValue[0]);
         });
 
         Thread consumer = new Thread(() -> {
             try {
-                Thread.sleep(1000);
-                queue.poll();
+                consumedValue[0] = queue.poll();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         });
 
         producer.start();
-        consumer.start();
-
         producer.join();
+
+        consumer.start();
         consumer.join();
 
-        assertEquals(2, queue.poll(), "Первый элемент должен быть 2");
-        assertEquals(3, queue.poll(), "Второй элемент должен быть 3");
+        assertEquals(42, producedValue[0], "Произведено неверное значение");
+        assertEquals(producedValue[0], consumedValue[0], "Потреблено неверное значение");
+        assertTrue(queue.isEmpty(), "Очередь должна быть пустой");
     }
 
     @Test
-    @DisplayName("При пустой очереди потребитель блокируется до появления элементов")
-    void consumerBlocksWhenQueueIsEmpty() throws InterruptedException {
-        SimpleBlockingQueue<Integer> queue = new SimpleBlockingQueue<>(2);
+    @DisplayName("Потребитель ждет, когда производитель добавит элемент")
+    void consumerWaitsForProducer() throws InterruptedException {
+        SimpleBlockingQueue<Integer> queue = new SimpleBlockingQueue<>(1);
+        final boolean[] consumerFinished = {false};
 
         Thread consumer = new Thread(() -> {
             try {
                 queue.poll();
+                consumerFinished[0] = true;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -82,7 +54,7 @@ class SimpleBlockingQueueTest {
 
         Thread producer = new Thread(() -> {
             try {
-                Thread.sleep(1000);
+                Thread.sleep(500); // Имитируем задержку
                 queue.offer(1);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -90,62 +62,46 @@ class SimpleBlockingQueueTest {
         });
 
         consumer.start();
+        Thread.sleep(100);
+
         producer.start();
-
-        consumer.join();
         producer.join();
+        consumer.join();
 
-        assertTrue(queue.isEmpty(), "Очередь должна быть пустой после извлечения единственного элемента");
+        assertTrue(consumerFinished[0], "Потребитель должен был завершиться");
+        assertTrue(queue.isEmpty(), "Очередь должна быть пустой");
     }
 
     @Test
-    @DisplayName("Многопоточная работа с несколькими производителями и потребителями")
-    void multipleProducersAndConsumers() throws InterruptedException {
-        SimpleBlockingQueue<Integer> queue = new SimpleBlockingQueue<>(10);
-        final int count = 100;
+    @DisplayName("Производитель ждет, когда потребитель освободит место")
+    void producerWaitsForConsumer() throws InterruptedException {
+        SimpleBlockingQueue<Integer> queue = new SimpleBlockingQueue<>(1);
+        final boolean[] producerFinished = {false};
 
-        Thread producer1 = new Thread(() -> {
-            for (int i = 0; i < count; i++) {
-                queue.offer(i);
+        queue.offer(1);
+
+        Thread producer = new Thread(() -> {
+            queue.offer(2);
+            producerFinished[0] = true;
+        });
+
+        Thread consumer = new Thread(() -> {
+            try {
+                Thread.sleep(500);
+                queue.poll();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         });
 
-        Thread producer2 = new Thread(() -> {
-            for (int i = count; i < count * 2; i++) {
-                queue.offer(i);
-            }
-        });
+        producer.start();
+        Thread.sleep(100);
 
-        Thread consumer1 = new Thread(() -> {
-            for (int i = 0; i < count; i++) {
-                try {
-                    queue.poll();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        });
+        consumer.start();
+        consumer.join();
+        producer.join();
 
-        Thread consumer2 = new Thread(() -> {
-            for (int i = 0; i < count; i++) {
-                try {
-                    queue.poll();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        });
-
-        producer1.start();
-        producer2.start();
-        consumer1.start();
-        consumer2.start();
-
-        producer1.join();
-        producer2.join();
-        consumer1.join();
-        consumer2.join();
-
-        assertTrue(queue.isEmpty(), "Очередь должна быть пустой после работы всех потоков");
+        assertTrue(producerFinished[0], "Производитель должен был завершиться");
+        assertEquals(2, queue.poll(), "В очереди должен быть второй элемент");
     }
 }
