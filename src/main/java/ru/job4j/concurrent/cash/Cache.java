@@ -38,16 +38,15 @@ public class Cache {
      * @throws OptimisticException если версии объекта не совпадают
      */
     public boolean update(Base model) throws OptimisticException {
-        return memory.computeIfPresent(model.id(), (key, stored) -> {
-            if (stored.version() != model.version()) {
-                try {
-                    throw new OptimisticException("Versions are not equal");
-                } catch (OptimisticException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            return new Base(model.id(), model.name(), model.version() + 1);
-        }) != null;
+        Base stored = memory.get(model.id());
+        if (stored == null) {
+            return false;
+        }
+        if (stored.version() != model.version()) {
+            throw new OptimisticException("Versions are not equal");
+        }
+        Base updated = new Base(model.id(), model.name(), model.version() + 1);
+        return memory.replace(model.id(), stored, updated);
     }
 
     /**
