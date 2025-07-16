@@ -5,7 +5,7 @@ import ru.job4j.concurrent.ParallelSearchNew;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Тестирование параллельного поиска в массиве")
-public class ParallelSearchNewTest {
+public class ParallelSearchTest {
 
     @Test
     @DisplayName("Поиск в массиве целых чисел")
@@ -64,10 +64,21 @@ public class ParallelSearchNewTest {
 
             @Override
             public boolean equals(Object obj) {
-                if (this == obj) return true;
-                if (obj == null || getClass() != obj.getClass()) return false;
+                if (this == obj) {
+                    return true;
+                }
+                if (obj == null || getClass() != obj.getClass()) {
+                    return false;
+                }
                 Person person = (Person) obj;
                 return age == person.age && name.equals(person.name);
+            }
+
+            @Override
+            public int hashCode() {
+                int result = name != null ? name.hashCode() : 0;
+                result = 31 * result + age;
+                return result;
             }
         }
 
