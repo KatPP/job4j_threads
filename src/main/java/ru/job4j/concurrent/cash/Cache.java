@@ -42,11 +42,11 @@ public class Cache {
         if (stored == null) {
             return false;
         }
-        if (stored.version() != model.version()) {
+        Base updated = new Base(model.id(), model.name(), model.version() + 1);
+        if (!memory.replace(model.id(), stored, updated)) {
             throw new OptimisticException("Versions are not equal");
         }
-        Base updated = new Base(model.id(), model.name(), model.version() + 1);
-        return memory.replace(model.id(), stored, updated);
+        return true;
     }
 
     /**
